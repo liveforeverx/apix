@@ -4,17 +4,17 @@ defmodule Apix do
 
   ## Example
 
-    iex> defmodule Test.Api do
-    ...>   use Apix
-    ...>   api "Test", :foo
-    ...>   @moduledoc "Example api"
-    ...>   @doc "Example function"
-    ...>   def foo(_), do: :bar
-    ...> end
-    iex> Apix.spec(Test.Api, :methods)
-    ["Test"]
-    iex> Apix.apply(Test.Api, "Test", %{})
-    :bar
+      iex> defmodule Test.Api do
+      ...>   use Apix
+      ...>   api "Test", :foo
+      ...>   @moduledoc "Example api"
+      ...>   @doc "Example function"
+      ...>   def foo(_), do: :bar
+      ...> end
+      iex> Apix.spec(Test.Api, :methods)
+      ["Test"]
+      iex> Apix.apply(Test.Api, "Test", %{})
+      :bar
 
   For more introspection rules, see `spec/1`, `spec/2`, `spec/3` functions.
 
@@ -134,8 +134,8 @@ defmodule Apix do
   Get api description of a module.
 
   ## Example
-    iex> Apix.spec(Simple.Api)
-    "This api describes very simple get/put storage api.\nAnd should be a very small example of how to use it.\n"
+      iex> Apix.spec(Simple.Api)
+      "This api describes very simple get/put storage api.\nAnd should be a very small example of how to use it.\n"
   """
   def spec(module) do
     Code.get_docs(module, :moduledoc) |> elem(1)
@@ -146,8 +146,8 @@ defmodule Apix do
 
   ## Example
 
-    iex> Apix.spec(Simple.Api, :methods)
-    ["Get", "Put"]
+      iex> Apix.spec(Simple.Api, :methods)
+      ["Get", "Put"]
   """
   def spec(module, :methods), do: module.__apix__(:methods)
 
@@ -156,10 +156,10 @@ defmodule Apix do
 
   ## Example
 
-    iex> Apix.spec(Simple.Api, :method, "Put")
-    %{arguments: [key: %{description: "describes key, on which it will be saved", optional: false, type: "string"},
+      iex> Apix.spec(Simple.Api, :method, "Put")
+      %{arguments: [key: %{description: "describes key, on which it will be saved", optional: false, type: "string"},
                   value: %{description: "describes value", optional: false, type: "string"}],
-      doc: "Put a value for the key"}
+        doc: "Put a value for the key"}
   """
   def spec(module, :method, method), do: module.__apix__(:method, method)
 
@@ -168,10 +168,10 @@ defmodule Apix do
 
   ## Example
 
-    iex> Apix.apply(Simple.Api, "Put", %{key: "foo", value: "bar"})
-    %{result: true}
-    iex> Apix.apply(Simple.Api, "Get", %{key: "foo"})
-    %{result: "bar"}
+      iex> Apix.apply(Simple.Api, "Put", %{key: "foo", value: "bar"})
+      %{result: true}
+      iex> Apix.apply(Simple.Api, "Get", %{key: "foo"})
+      %{result: "bar"}
   """
   def apply(module, method, args), do: module.__apix__(:apply, method, args)
 end
