@@ -21,7 +21,7 @@ defmodule Apix do
   For more introspection rules, see `spec/1`, `spec/2`, `spec/3` functions.
 
   There are some word in documetation, which will be identified, for example:
-  `## Attributes`, starting the attributes section.
+  `## Parameters`, starting the attributes section.
 
   Each attribute should have the same format: "* `key` - type, description" or
   "* `key` - type, optional, description". Type should be of type, which your validator
@@ -99,7 +99,7 @@ defmodule Apix do
     do: process_doc(next, :initial, [string | acc], result)
   defp process_doc([string | next], :wait, _acc, result) do
     case String.strip(string) do
-      "## Attributes" ->
+      "## Parameters" ->
         process_doc(next, :arguments, [], result)
       _ ->
         process_doc(next, :wait, [], result)

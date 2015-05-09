@@ -23,7 +23,7 @@ if Mix.env == :test do
     @doc """
     Get value for a defined key
 
-    ## Attributes
+    ## Parameters
 
       * `:key` - string, must be sent
       * `:default` - string, optional, defines default, if nothing found to be returned
@@ -39,7 +39,7 @@ if Mix.env == :test do
     @doc """
     Put a value for the key
 
-    ## Attributes
+    ## Parameters
 
       * `:key` - string, describes key, on which it will be saved
       * `:value` - string, describes value

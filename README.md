@@ -30,7 +30,7 @@ defmodule Simple.Api do
   @doc """
   Get value for a defined key
 
-  ## Attributes
+  ## Parameters
 
     * `:key` - string, must be sent
     * `:default` - string, optional, defines default, if nothing found to be returned
@@ -46,7 +46,7 @@ defmodule Simple.Api do
   @doc """
   Put a value for the key
 
-  ## Attributes
+  ## Parameters
 
     * `:key` - string, describes key, on which it will be saved
     * `:value` - string, describes value
@@ -78,7 +78,7 @@ iex> Apix.spec(Simple.Api, :doc)
 ```
 
 There are some word in documetation, which will be identified, for example:
-`## Attributes`, starting the attributes section.
+`## Parameters`, starting the attributes section.
 
 Each attribute should have the same format: "* `key` - type, description" or
 "* `key` - type, optional, description". Type should be of type, which your validator
