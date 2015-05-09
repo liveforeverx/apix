@@ -7,6 +7,7 @@ defmodule Apix do
       iex> defmodule Test.Api do
       ...>   use Apix
       ...>   @name "Test"
+      ...>   @tech_name "test"
       ...>   api "Test", :foo
       ...>   @moduledoc "Example api"
       ...>   @doc "Example function"
@@ -36,13 +37,16 @@ defmodule Apix do
   end
 
   defmacro __before_compile__(env) do
-    Module.get_attribute(env.module, :moduledoc) || raise ArgumentError, message: "There must be a module documentation for a module #{io_module(env.module)}"
-    name = Module.get_attribute(env.module, :name) || raise ArgumentError, message: "There must be a name for a module #{io_module(env.module)}"
-    docs = :elixir_module.data_table(env.module) |> :ets.match(@doc_match) |> Enum.map(fn([a, b, c]) -> {{a, b}, c} end)
-    apis = Module.get_attribute(env.module, :apix_apis) |> Enum.reverse
+    module = env.module
+    Module.get_attribute(module, :moduledoc) || raise ArgumentError, message: "There must be a module documentation for a module #{io_module(module)}"
+    name      = Module.get_attribute(module, :name)      || raise ArgumentError, message: "There must be a `@name` attribute for a module #{io_module(module)}"
+    tech_name = Module.get_attribute(module, :tech_name) || raise ArgumentError, message: "There must be a `@tech_name` attribute for a module #{io_module(module)}"
+    docs = :elixir_module.data_table(module) |> :ets.match(@doc_match) |> Enum.map(fn([a, b, c]) -> {{a, b}, c} end)
+    apis = Module.get_attribute(module, :apix_apis) |> Enum.reverse
     method_specs = method_specs(apis, docs, env)
     quote do
-      def __apix__(), do: unquote(name)
+      def __apix__(), do: unquote(tech_name)
+      def __apix__(:name), do: unquote(name)
       def __apix__(:methods), do: unquote(Enum.map(apis, &elem(&1, 0)))
       unquote(method_specs)
     end
@@ -138,7 +142,7 @@ defmodule Apix do
 
   ## Example
       iex> Apix.spec(Simple.Api)
-      "SimpleStore"
+      "store"
   """
   def spec(module), do: module.__apix__
 
@@ -147,13 +151,15 @@ defmodule Apix do
 
   ## Example
 
+      iex> Apix.spec(Simple.Api, :name)
+      "SimpleStore"
       iex> Apix.spec(Simple.Api, :doc)
       "This api describes very simple get/put storage api.\nAnd should be a very small example of how to use it.\n"
       iex> Apix.spec(Simple.Api, :methods)
       ["Get", "Put"]
   """
   def spec(module, :doc), do: Code.get_docs(module, :moduledoc) |> elem(1)
-  def spec(module, :methods), do: module.__apix__(:methods)
+  def spec(module, key) when key in [:name, :methods], do: module.__apix__(key)
 
   @doc ~S"""
   Get specification of a method in module and parameters in it.

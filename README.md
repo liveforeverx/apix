@@ -13,6 +13,7 @@ defmodule Simple.Api do
   """
   use Apix
   @name "SimpleStore"
+  @tech_name "store"
   api "Get", :get
   api "Put", :put
 
@@ -70,6 +71,10 @@ iex> Apix.spec(Simple.Api, :method, "Put")
 %{arguments: [key: %{description: "describes key, on which it will be saved", optional: false, type: "string"},
               value: %{description: "describes value", optional: false, type: "string"}],
   doc: "Put a value for the key"}
+iex> Apix.spec(Simple.Api, :name)
+"SimpleStore"
+iex> Apix.spec(Simple.Api, :doc)
+"This api describes very simple get/put storage api.\nAnd should be a very small example of how to use it.\n"
 ```
 
 There are some word in documetation, which will be identified, for example:
