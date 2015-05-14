@@ -1,12 +1,19 @@
 defmodule Apix.Mixfile do
   use Mix.Project
 
+  @version "0.1.0"
+  @github "https://github.com/liveforeverx/apix"
+
   def project do
     [app: :apix,
-     version: "0.0.1",
+     version: @version,
      elixir: "~> 1.1-dev",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
+     name: "Apix",
+     source_url: @github,
+     description: description,
+     package: package,
      deps: deps]
   end
 
@@ -17,16 +24,17 @@ defmodule Apix.Mixfile do
     [applications: [:logger]]
   end
 
-  # Dependencies can be Hex packages:
-  #
-  #   {:mydep, "~> 0.3.0"}
-  #
-  # Or git/path repositories:
-  #
-  #   {:mydep, git: "https://github.com/elixir-lang/mydep.git", tag: "0.1.0"}
-  #
-  # Type `mix help deps` for more examples and options
+  defp description do
+    "Simple convention and DSL for transformation of elixir functions to a documented and ready for validation API."
+  end
+
+  defp package do
+    [contributors: ["Dmitry Russ(Aleksandrov)"],
+     links: %{"Github" => @github}]
+  end
+
   defp deps do
     []
   end
 end
+
