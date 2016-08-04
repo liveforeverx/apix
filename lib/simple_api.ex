@@ -7,6 +7,7 @@ if Mix.env == :test do
     use Apix
     @name "SimpleStore"
     @tech_name "store"
+    @strict true
     api "Get", :get
     api "Put", :put
 

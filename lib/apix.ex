@@ -38,12 +38,13 @@ defmodule Apix do
 
   defmacro __before_compile__(env) do
     module = env.module
-    Module.get_attribute(module, :moduledoc) || raise ArgumentError, message: "There must be a module documentation for a module #{io_module(module)}"
+    no_docs = if !Module.get_attribute(module, :strict), do: ""
+    Module.get_attribute(module, :moduledoc) || no_docs || raise ArgumentError, message: "There must be a module documentation for a module #{io_module(module)}"
     name      = Module.get_attribute(module, :name)      || raise ArgumentError, message: "There must be a `@name` attribute for a module #{io_module(module)}"
     tech_name = Module.get_attribute(module, :tech_name) || raise ArgumentError, message: "There must be a `@tech_name` attribute for a module #{io_module(module)}"
     docs = :elixir_module.data_table(module) |> :ets.match(@doc_match) |> Enum.map(fn([a, b, c]) -> {{a, b}, c} end)
     apis = Module.get_attribute(module, :apix_apis) |> Enum.reverse
-    method_specs = method_specs(apis, docs, env)
+    method_specs = method_specs(apis, docs, no_docs, env)
     quote do
       def __apix__(), do: unquote(tech_name)
       def __apix__(:name), do: unquote(name)
@@ -62,9 +63,9 @@ defmodule Apix do
     end
   end
 
-  defp method_specs(apis, docs, env) do
+  defp method_specs(apis, docs, no_docs, env) do
     apix_methods = for {method, function, args} <- apis do
-      {_, doc} = List.keyfind(docs, {function, length(args) + 1}, 0) || raise ArgumentError, message: "There must be a documentation for a function #{io_module(env.module)}.#{function}/1"
+      doc = get(docs, {function, length(args) + 1}) || no_docs || raise ArgumentError, message: "There must be a documentation for a function #{io_module(env.module)}.#{function}/1"
       quote do
         def __apix__(:method, unquote(method)), do: unquote(process_doc(doc) |> Macro.escape)
       end
@@ -84,6 +85,13 @@ defmodule Apix do
     case to_string(module) do
       "Elixir." <> string -> string
       string -> string
+    end
+  end
+
+  defp get(list, key) do
+    case List.keyfind(list, key, 0) do
+      {_, value} -> value
+      nil -> nil
     end
   end
 
