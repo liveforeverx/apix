@@ -1,13 +1,12 @@
 defmodule Apix.Mixfile do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.1.1"
   @github "https://github.com/liveforeverx/apix"
 
   def project do
     [app: :apix,
      version: @version,
-     elixir: "~> 1.1-dev",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      name: "Apix",
@@ -29,8 +28,9 @@ defmodule Apix.Mixfile do
   end
 
   defp package do
-    [contributors: ["Dmitry Russ(Aleksandrov)"],
-     links: %{"Github" => @github}]
+    [maintainers: ["Dmitry Russ(Aleksandrov)"],
+     links: %{"Github" => @github},
+     licenses: ["Apache 2.0"]]
   end
 
   defp deps do
