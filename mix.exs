@@ -1,19 +1,22 @@
 defmodule Apix.Mixfile do
   use Mix.Project
 
-  @version "0.1.1"
+  @version "0.2.0"
   @github "https://github.com/liveforeverx/apix"
 
   def project do
-    [app: :apix,
-     version: @version,
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     name: "Apix",
-     source_url: @github,
-     description: description,
-     package: package,
-     deps: deps]
+    [
+      app: :apix,
+      elixir: "~> 1.7",
+      version: @version,
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      name: "Apix",
+      source_url: @github,
+      description: description(),
+      package: package(),
+      deps: deps()
+    ]
   end
 
   # Configuration for the OTP application
@@ -28,13 +31,14 @@ defmodule Apix.Mixfile do
   end
 
   defp package do
-    [maintainers: ["Dmitry Russ(Aleksandrov)"],
-     links: %{"Github" => @github},
-     licenses: ["Apache 2.0"]]
+    [
+      maintainers: ["Dmitry Russ(Aleksandrov)"],
+      links: %{"Github" => @github},
+      licenses: ["Apache 2.0"]
+    ]
   end
 
   defp deps do
     []
   end
 end
-

@@ -7,7 +7,7 @@ defmodule Apix do
       iex> defmodule Test.Api do
       ...>   use Apix
       ...>   @name "Test"
-      ...>   @tech_name "test"
+      ...>   @namespace "test"
       ...>   api "Test", :foo
       ...>   @moduledoc "Example api"
       ...>   @doc "Example function"
@@ -27,29 +27,48 @@ defmodule Apix do
   "* `key` - type, optional, description". Type should be of type, which your validator
   supports.
   """
-  @doc_match {{:doc, {:'$1', :'$2'}}, :_, :def, :_, :'$3'}
   defmacro __using__(_opts) do
     quote do
       import Apix, only: :macros
-      @apix_apis []
+      Module.register_attribute(__MODULE__, :apix_apis, accumulate: true)
+      @on_definition Apix
       @before_compile Apix
     end
   end
 
-  defmacro __before_compile__(env) do
-    module = env.module
+  defmacro __before_compile__(%{module: module} = env) do
     no_docs = if !Module.get_attribute(module, :strict), do: ""
-    Module.get_attribute(module, :moduledoc) || no_docs || raise ArgumentError, message: "There must be a module documentation for a module #{io_module(module)}"
-    name      = Module.get_attribute(module, :name)      || raise ArgumentError, message: "There must be a `@name` attribute for a module #{io_module(module)}"
-    tech_name = Module.get_attribute(module, :tech_name) || raise ArgumentError, message: "There must be a `@tech_name` attribute for a module #{io_module(module)}"
-    docs = :elixir_module.data_table(module) |> :ets.match(@doc_match) |> Enum.map(fn([a, b, c]) -> {{a, b}, c} end)
-    apis = Module.get_attribute(module, :apix_apis) |> Enum.reverse
-    method_specs = method_specs(apis, docs, no_docs, env)
+
+    Module.get_attribute(module, :moduledoc) || no_docs ||
+      raise ArgumentError,
+        message: "There must be a module documentation for a module #{io_module(module)}"
+
+    name =
+      Module.get_attribute(module, :name) || no_docs ||
+        raise ArgumentError,
+          message: "There must be a `@name` attribute for a module #{io_module(module)}"
+
+    namespace =
+      Module.get_attribute(module, :namespace) ||
+        raise ArgumentError,
+          message: "There must be a `@namespace` attribute for a module #{io_module(module)}"
+
+    apis = module |> Module.get_attribute(:apix_apis) |> Enum.reverse()
+    method_specs = method_specs(apis, no_docs, env)
+
     quote do
-      def __apix__(), do: unquote(tech_name)
+      def __apix__(), do: unquote(namespace)
       def __apix__(:name), do: unquote(name)
       def __apix__(:methods), do: unquote(Enum.map(apis, &elem(&1, 0)))
       unquote(method_specs)
+    end
+  end
+
+  def __on_definition__(%{module: module} = _env, _kind, name, _args, _guards, _body) do
+    if Module.get_attribute(module, :api) do
+      doc = Module.get_attribute(module, :doc)
+      Module.put_attribute(module, :apix_apis, {to_string(name), doc})
+      Module.delete_attribute(module, :api)
     end
   end
 
@@ -63,21 +82,43 @@ defmodule Apix do
     end
   end
 
-  defp method_specs(apis, docs, no_docs, env) do
-    apix_methods = for {method, function, args} <- apis do
-      doc = get(docs, {function, length(args) + 1}) || no_docs || raise ArgumentError, message: "There must be a documentation for a function #{io_module(env.module)}.#{function}/1"
-      quote do
-        def __apix__(:method, unquote(method)), do: unquote(process_doc(doc) |> Macro.escape)
+  defp method_specs(apis, no_docs, %{module: module} = _env) do
+    apix_methods =
+      for {function, doc} <- apis do
+        processed_doc = doc |> extract_doc(no_docs, module, function) |> process_doc()
+        method = to_string(function)
+
+        quote do
+          def __apix__(:method, unquote(method)), do: unquote(Macro.escape(processed_doc))
+        end
       end
-    end
-    applies = for {method, function, args} <- apis do
-      quote do
-        def __apix__(:apply, unquote(method), args), do: unquote(function)(args, unquote_splicing(args))
+
+    applies =
+      for {method, function, args} <- apis do
+        quote do
+          def __apix__(:apply, unquote(method), args),
+            do: unquote(function)(args, unquote_splicing(args))
+        end
       end
-    end
+
     quote do
       unquote(apix_methods)
       unquote(applies)
+    end
+  end
+
+  defp extract_doc(doc, no_docs, module, function) do
+    case doc do
+      {_, doc} ->
+        doc
+
+      _ when is_binary(no_docs) ->
+        no_docs
+
+      _ ->
+        raise ArgumentError,
+          message:
+            "There must be a documentation for a function #{io_module(module)}.#{function}/1"
     end
   end
 
@@ -88,27 +129,24 @@ defmodule Apix do
     end
   end
 
-  defp get(list, key) do
-    case List.keyfind(list, key, 0) do
-      {_, value} -> value
-      nil -> nil
-    end
-  end
-
   defp process_doc(doc) do
-    String.split(doc, "\n") |> process_doc(:initial, [], %{doc: nil, arguments: []})
+    doc |> String.split("\n") |> process_doc(:initial, [], %{doc: nil, arguments: []})
   end
 
   defp process_doc([], state, _acc, result) when state in [:wait, :initial],
     do: result
+
   defp process_doc(["" | next], :initial, acc, result),
     do: process_doc(next, :wait, [], %{result | doc: Enum.reverse(acc) |> Enum.join("\n")})
+
   defp process_doc([string | next], :initial, acc, result),
     do: process_doc(next, :initial, [string | acc], result)
+
   defp process_doc([string | next], :wait, _acc, result) do
-    case String.strip(string) do
+    case String.trim(string) do
       "## Parameters" ->
         process_doc(next, :arguments, [], result)
+
       _ ->
         process_doc(next, :wait, [], result)
     end
@@ -117,31 +155,39 @@ defmodule Apix do
   defp process_doc([], :arguments, acc, result) do
     %{result | arguments: Enum.reverse(acc)}
   end
+
   defp process_doc([string | next], :arguments, acc, result) do
-    case String.strip(string) do
+    case String.trim(string) do
       "*" <> value ->
         [_, key, other_parts] = String.split(value, "`", parts: 3)
         process_doc(next, :arguments, [argument(key, other_parts) | acc], result)
+
       _ ->
         case acc do
           [] -> process_doc(next, :arguments, acc, result)
-          _  -> %{result | arguments: Enum.reverse(acc)}
+          _ -> %{result | arguments: Enum.reverse(acc)}
         end
     end
   end
 
   defp argument(key, " - " <> other_parts) do
     [type | next] = String.split(other_parts, ",")
-    key = :"#{key |> String.strip(?:)}"
+    key = :"#{String.trim(key, ":")}"
+
     case next do
       [may_be_optional, next | rest] ->
-        {optional, new_rest} = case String.strip(may_be_optional) do
-          "optional" -> {true, [next | rest]}
-          _ -> {false, [may_be_optional, next | rest]}
-        end
-        {key, %{type: type, optional: optional, description: Enum.join(new_rest, ",") |> String.strip}}
+        {optional, new_rest} =
+          case String.trim(may_be_optional) do
+            "optional" -> {true, [next | rest]}
+            _ -> {false, [may_be_optional, next | rest]}
+          end
+
+        description = new_rest |> Enum.join(",") |> String.trim()
+        {key, %{type: type, optional: optional, description: description}}
+
       rest ->
-        {key, %{type: type, optional: false, description: Enum.join(rest, ",") |> String.strip}}
+        description = rest |> Enum.join(",") |> String.trim()
+        {key, %{type: type, optional: false, description: description}}
     end
   end
 

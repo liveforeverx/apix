@@ -1,4 +1,4 @@
-if Mix.env == :test do
+if Mix.env() == :test do
   defmodule Simple.Api do
     @moduledoc """
     This api describes very simple get/put storage api.
@@ -6,16 +6,15 @@ if Mix.env == :test do
     """
     use Apix
     @name "SimpleStore"
-    @tech_name "store"
+    @namespace "store"
     @strict true
-    api "Get", :get
-    api "Put", :put
 
     def ensure_started() do
       case Process.whereis(:simple) do
         nil ->
           {:ok, pid} = Agent.start_link(fn -> %{} end)
           Process.register(pid, :simple)
+
         _ ->
           :ok
       end
@@ -32,6 +31,7 @@ if Mix.env == :test do
     ## Results
 
     """
+    @api true
     def get(%{key: key} = args) do
       ensure_started()
       %{result: Agent.get(:simple, &Map.get(&1, key, args[:default]))}
@@ -48,6 +48,7 @@ if Mix.env == :test do
     ## Results
 
     """
+    @api true
     def put(%{key: key, value: value} = _args) do
       ensure_started()
       Agent.update(:simple, &Map.put(&1, key, value))
