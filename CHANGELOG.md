@@ -1,3 +1,7 @@
+# 0.2.2
+
+* Add possibility to dispatch function with multiple arguments
+
 # 0.2.1
 
 * Return nil if function is undefined for easier check, if function exists

@@ -88,7 +88,9 @@ defmodule Apix do
         method = to_string(function)
 
         quote do
-          def __apix__(:apply, unquote(method), args), do: unquote(function)(args)
+          def __apix__(:apply, unquote(method), args) do
+            apply(__MODULE__, unquote(function), List.wrap(args))
+          end
         end
       end
 
