@@ -4,19 +4,19 @@ defmodule Apix do
 
   ## Example
 
-      iex> defmodule Test.Api do
-      ...>   use Apix
-      ...>   @name "Test"
-      ...>   @namespace "test"
-      ...>   api "Test", :foo
-      ...>   @moduledoc "Example api"
-      ...>   @doc "Example function"
-      ...>   def foo(_), do: :bar
-      ...> end
-      iex> Apix.spec(Test.Api, :methods)
-      ["Test"]
-      iex> Apix.apply(Test.Api, "Test", %{})
-      :bar
+  #    iex> defmodule Test.Api do
+  #    ...>   use Apix
+  #    ...>   @name "Test"
+  #    ...>   @namespace "test"
+  #    ...>   @api true
+  #    ...>   @moduledoc "Example api"
+  #    ...>   @doc "Example function"
+  #    ...>   def test(_), do: :bar
+  #    ...> end
+  #    iex> Apix.spec(Test.Api, :methods)
+  #    ["Test"]
+  #    iex> Apix.apply(Test.Api, "test", %{})
+  #    :bar
 
   For more introspection rules, see `spec/1`, `spec/2`, `spec/3` functions.
 
@@ -59,7 +59,7 @@ defmodule Apix do
     quote do
       def __apix__(), do: unquote(namespace)
       def __apix__(:name), do: unquote(name)
-      def __apix__(:methods), do: unquote(Enum.map(apis, &elem(&1, 0)))
+      def __apix__(:methods), do: unquote(for {function, _} <- apis, do: to_string(function))
       unquote(method_specs)
     end
   end
@@ -67,18 +67,8 @@ defmodule Apix do
   def __on_definition__(%{module: module} = _env, _kind, name, _args, _guards, _body) do
     if Module.get_attribute(module, :api) do
       doc = Module.get_attribute(module, :doc)
-      Module.put_attribute(module, :apix_apis, {to_string(name), doc})
+      Module.put_attribute(module, :apix_apis, {name, doc})
       Module.delete_attribute(module, :api)
-    end
-  end
-
-  @doc """
-  This macro, defines the binding between symbolic method name and exported elixir function.
-  And defines, which function should be exported as API method.
-  """
-  defmacro api(method, function, args \\ []) do
-    quote bind_quoted: binding() do
-      @apix_apis [{method, function, args} | @apix_apis]
     end
   end
 
@@ -94,16 +84,19 @@ defmodule Apix do
       end
 
     applies =
-      for {method, function, args} <- apis do
+      for {function, _doc} <- apis do
+        method = to_string(function)
+
         quote do
-          def __apix__(:apply, unquote(method), args),
-            do: unquote(function)(args, unquote_splicing(args))
+          def __apix__(:apply, unquote(method), args), do: unquote(function)(args)
         end
       end
 
     quote do
       unquote(apix_methods)
+      def __apix__(:method, method), do: {:error, {:not_found, :method, method}}
       unquote(applies)
+      def __apix__(:apply, method, _), do: {:error, {:not_found, :method, method}}
     end
   end
 
@@ -210,9 +203,13 @@ defmodule Apix do
       iex> Apix.spec(Simple.Api, :doc)
       "This api describes very simple get/put storage api.\nAnd should be a very small example of how to use it.\n"
       iex> Apix.spec(Simple.Api, :methods)
-      ["Get", "Put"]
+      ["get", "put"]
   """
-  def spec(module, :doc), do: Code.get_docs(module, :moduledoc) |> elem(1)
+  def spec(module, :doc) do
+    {:docs_v1, _, :elixir, _, %{"en" => module_doc}, _, _} = Code.fetch_docs(module)
+    module_doc
+  end
+
   def spec(module, key) when key in [:name, :methods], do: module.__apix__(key)
 
   @doc ~S"""
@@ -220,7 +217,7 @@ defmodule Apix do
 
   ## Example
 
-      iex> Apix.spec(Simple.Api, :method, "Put")
+      iex> Apix.spec(Simple.Api, :method, "put")
       %{arguments: [key: %{description: "describes key, on which it will be saved", optional: false, type: "string"},
                   value: %{description: "describes value", optional: false, type: "string"}],
         doc: "Put a value for the key"}
@@ -232,9 +229,9 @@ defmodule Apix do
 
   ## Example
 
-      iex> Apix.apply(Simple.Api, "Put", %{key: "foo", value: "bar"})
+      iex> Apix.apply(Simple.Api, "put", %{key: "foo", value: "bar"})
       %{result: true}
-      iex> Apix.apply(Simple.Api, "Get", %{key: "foo"})
+      iex> Apix.apply(Simple.Api, "get", %{key: "foo"})
       %{result: "bar"}
   """
   def apply(module, method, args), do: module.__apix__(:apply, method, args)

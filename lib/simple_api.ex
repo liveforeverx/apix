@@ -1,4 +1,4 @@
-if Mix.env() == :test do
+if Mix.env() in [:dev, :test] do
   defmodule Simple.Api do
     @moduledoc """
     This api describes very simple get/put storage api.
